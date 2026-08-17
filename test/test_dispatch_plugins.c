@@ -103,6 +103,27 @@ static const bg3lese_plugin inject_plugin = {
 };
 BG3LESE_BUILTIN(inject_plugin);
 
+/* Two plugins claiming the same name: exactly one must load. A bundle and a
+ * dropped-in .so can legitimately contain the same plugin, and running it twice
+ * would mean two sets of patches and two consumers of the same key.
+ *
+ * They are given their own name rather than colliding with "early", because
+ * which of two identically-named built-ins wins is link order, and the rest of
+ * the suite should not depend on that. */
+static int dup_init(const bg3lese_api *a) { a->log("init"); return 0; }
+
+static const bg3lese_plugin dupe_a = {
+    .abi = BG3LESE_ABI, .name = "dupe", .version = "a",
+    .priority = 90, .init = dup_init,
+};
+BG3LESE_BUILTIN(dupe_a);
+
+static const bg3lese_plugin dupe_b = {
+    .abi = BG3LESE_ABI, .name = "dupe", .version = "b",
+    .priority = 90, .init = dup_init,
+};
+BG3LESE_BUILTIN(dupe_b);
+
 /* ---- a plugin the host must refuse: wrong ABI ---- */
 
 static const bg3lese_plugin stale_plugin = {

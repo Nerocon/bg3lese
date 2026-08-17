@@ -202,6 +202,20 @@ static int g_is_host;
 static void add_plugin(const bg3lese_plugin *p, void *dl)
 {
     if (!p || g_nslot >= MAX_PLUGINS) return;
+
+    /* The same plugin can legitimately arrive twice: built into a bundle and
+     * again as a dynamic .so someone dropped in plugins/. Loading both would
+     * run it twice — two sets of patches, two consumers of the same key — so
+     * first registration wins and the second is refused loudly. */
+    for (size_t i = 0; i < g_nslot; i++) {
+        if (p->name && g_slot[i].p->name && !strcmp(p->name, g_slot[i].p->name)) {
+            core_log("plugin '%s' is already loaded%s — ignoring the duplicate",
+                     p->name, dl ? " (built in)" : "");
+            if (dl) dlclose(dl);
+            return;
+        }
+    }
+
     if (p->abi != BG3LESE_ABI) {
         core_log("plugin '%s' built against ABI %u, host is %u — not loaded",
                  p->name ? p->name : "?", p->abi, BG3LESE_ABI);

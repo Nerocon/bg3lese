@@ -48,6 +48,11 @@ check "both saw Z" "2" "$(grep -cE '(early|late): saw Z' "$LOG")"
 # The frame tick fires once the game drains its queue.
 check "on_frame ran" "1" "$(grep -c 'early: first frame' "$LOG")"
 
+# A duplicate name is refused, not run twice.
+check "a duplicate plugin name is refused" "1" \
+      "$(grep -c "plugin 'dupe' is already loaded" "$LOG")"
+check "and it initialises exactly once" "1" "$(grep -c 'dupe: init' "$LOG")"
+
 # A plugin built against another ABI is refused, not loaded and crossed fingers.
 check "wrong-ABI plugin refused" "1" "$(grep -c "plugin 'stale' built against ABI" "$LOG")"
 
