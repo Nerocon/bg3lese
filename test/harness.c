@@ -25,6 +25,7 @@ int main(void)
     push_key(SDL_SCANCODE_X);   /* consumed by "early" */
     push_key(SDL_SCANCODE_Y);   /* consumed by "late" */
     push_key(SDL_SCANCODE_Z);   /* consumed by nobody */
+    push_key(SDL_SCANCODE_Q);   /* swallowed and replaced with R */
 
     int keys = 0;
     SDL_Event e;

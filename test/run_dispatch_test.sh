@@ -24,9 +24,15 @@ out=$(env BG3LE_LOG="$LOG" BG3LE_FORCE_HOST=1 LD_PRELOAD=./"$B"/test_dispatch.so
 echo "=== host dispatch ==="
 
 # X is eaten by "early", Y by "late", Z by nobody.
-check "only the unconsumed key reaches the game" "RESULT keys=1" \
+check "only the unconsumed keys reach the game" "RESULT keys=2" \
       "$(grep '^RESULT' <<<"$out")"
-check "and it is the right one" "1" "$(grep -c 'GAME SAW Z' <<<"$out")"
+check "and the right one got through" "1" "$(grep -c 'GAME SAW Z' <<<"$out")"
+
+# Injection: Q is swallowed, R arrives in its place.
+check "the swapped-out key never reaches the game" "0" "$(grep -c 'GAME SAW Q' <<<"$out")"
+check "the injected key does" "1" "$(grep -c 'GAME SAW R' <<<"$out")"
+check "injection ran once, not in a loop" "1" "$(grep -c 'swapped Q for R' "$LOG")"
+check "injected events are not re-dispatched" "0" "$(grep -cE '(early|late): saw R' "$LOG")"
 
 # Priority, not link order: "late" is declared first in the source.
 order=$(grep -oE '(early|late): init' "$LOG" | head -2 | cut -d: -f1 | tr '\n' ' ')

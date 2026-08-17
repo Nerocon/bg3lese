@@ -72,6 +72,37 @@ static const bg3lese_plugin early_plugin = {
 };
 BG3LESE_BUILTIN(early_plugin);
 
+/* ---- injection: swap one key for another, the way a remap would ---- */
+
+static const bg3lese_api *inj_api;
+
+static int inj_init(const bg3lese_api *a) { inj_api = a; return 0; }
+
+static int inj_on_event(const SDL_Event *ev)
+{
+    if (ev->type != SDL_KEYDOWN) return 0;
+    if (ev->key.keysym.scancode != SDL_SCANCODE_Q) return 0;
+
+    /* Swallow Q and hand the game R instead. If injected events were dispatched
+     * back to plugins this would either be re-swallowed or loop forever, so the
+     * host delivering them straight to the game is the property under test. */
+    SDL_Event out = *ev;
+    out.key.keysym.scancode = SDL_SCANCODE_R;
+    inj_api->push_event(&out);
+    inj_api->log("swapped Q for R");
+    return 1;
+}
+
+static const bg3lese_plugin inject_plugin = {
+    .abi = BG3LESE_ABI,
+    .name = "inject",
+    .version = "test",
+    .priority = 1,
+    .init = inj_init,
+    .on_event = inj_on_event,
+};
+BG3LESE_BUILTIN(inject_plugin);
+
 /* ---- a plugin the host must refuse: wrong ABI ---- */
 
 static const bg3lese_plugin stale_plugin = {

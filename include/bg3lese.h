@@ -29,7 +29,7 @@
 extern "C" {
 #endif
 
-#define BG3LESE_ABI 1
+#define BG3LESE_ABI 2
 
 /* Return codes shared by the patching calls. */
 enum {
@@ -88,6 +88,16 @@ typedef struct bg3lese_api {
     /* ---- services ------------------------------------------------------ */
 
     void (*log)(const char *fmt, ...);
+
+    /* Hand the game an event it never actually received. Injected events are
+     * delivered ahead of real ones and are NOT dispatched back to plugins — a
+     * plugin must not be able to consume, or infinitely re-see, its own
+     * injection. Returns 0 on success, BG3LESE_BADARG if the queue is full.
+     *
+     * This exists because consuming input is only half of remapping it: a
+     * plugin that swallows a right-drag usually wants to hand the game some
+     * other gesture in its place. */
+    int (*push_event)(const SDL_Event *ev);
 
     /* True while the game has a text field focused — naming a save, renaming a
      * character. Any plugin that consumes keys must stand down while this is

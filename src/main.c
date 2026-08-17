@@ -155,6 +155,19 @@ static void api_image(const uint8_t **code, size_t *len, uintptr_t *base_va)
 
 static int api_text_input_active(void) { return g_text_input; }
 
+/* Events a plugin asked us to hand the game. Small on purpose: this is for
+ * remapping a gesture, not for scripting a playthrough. */
+#define MAX_INJECT 32
+static SDL_Event g_inject[MAX_INJECT];
+static size_t g_ninject;
+
+static int api_push_event(const SDL_Event *ev)
+{
+    if (!ev || g_ninject >= MAX_INJECT) return BG3LESE_BADARG;
+    g_inject[g_ninject++] = *ev;
+    return BG3LESE_OK;
+}
+
 static const bg3lese_api API = {
     .abi = BG3LESE_ABI,
     .host_version = BG3LESE_VERSION,
@@ -167,6 +180,7 @@ static const bg3lese_api API = {
     .patch_bytes = patch_bytes,
     .count_calls = patch_count_calls,
     .log = api_log,
+    .push_event = api_push_event,
     .text_input_active = api_text_input_active,
     .cfg = api_cfg,
     .cfg_int = api_cfg_int,
@@ -314,6 +328,13 @@ int SDL_PollEvent(SDL_Event *ev)
     }
 
     for (;;) {
+        /* Injected events go to the game ahead of real ones, and deliberately
+         * skip dispatch: a plugin must not consume or re-see its own. */
+        if (g_is_host && g_ninject) {
+            *ev = g_inject[0];
+            memmove(g_inject, g_inject + 1, (--g_ninject) * sizeof *g_inject);
+            return 1;
+        }
         int r = real_poll(ev);
         if (!r) {
             /* The game drains events until this returns 0, so here we are
